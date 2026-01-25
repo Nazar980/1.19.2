@@ -99,7 +99,6 @@ repositories {
 
 ext {
     lwjglVersion = '3.3.1'
-    imguiVersion = '1.86.10'
 }
 
 dependencies {
@@ -113,15 +112,19 @@ dependencies {
     // implementation fg.deobf("org.jetbrains.kotlin:kotlin-reflect:1.8.0")
 
     // ImGui dependencies (фиксируем версию 1.86.10)
-    ['binding', 'lwjgl3', 'natives-linux', 'natives-windows', 'natives-macos'].each {
-        minecraftLibrary (group: "io.github.spair", name: "imgui-java-$it", version: "$imguiVersion") {
-            exclude group: "org.lwjgl"
-        }
-        jarJar(group: "io.github.spair", name: "imgui-java-${it}", version: "$imguiVersion") { // Фиксируем версию здесь!
-            transitive(false)
-            exclude group: "org.lwjgl"
-        }
-    }
+
+    // ImGUI
+    implementation "io.github.spair:imgui-java-binding:${project.imguiVersion}"
+    shadow "io.github.spair:imgui-java-binding:${project.imguiVersion}"
+    implementation "io.github.spair:imgui-java-lwjgl3:${project.imguiVersion}"
+    shadow "io.github.spair:imgui-java-lwjgl3:${project.imguiVersion}"
+
+    implementation "io.github.spair:imgui-java-natives-windows:${project.imguiVersion}"
+    shadow "io.github.spair:imgui-java-natives-windows:${project.imguiVersion}"
+    implementation "io.github.spair:imgui-java-natives-linux:${project.imguiVersion}"
+    shadow "io.github.spair:imgui-java-natives-linux:${project.imguiVersion}"
+    implementation "io.github.spair:imgui-java-natives-macos:${project.imguiVersion}"
+    shadow "io.github.spair:imgui-java-natives-macos:${project.imguiVersion}"
 }
 
 mixin {
@@ -163,3 +166,4 @@ publishing {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
