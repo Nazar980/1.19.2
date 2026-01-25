@@ -115,16 +115,16 @@ dependencies {
 
     // ImGUI
     implementation "io.github.spair:imgui-java-binding:${project.imguiVersion}"
-    shadow "io.github.spair:imgui-java-binding:${project.imguiVersion}"
+
     implementation "io.github.spair:imgui-java-lwjgl3:${project.imguiVersion}"
-    shadow "io.github.spair:imgui-java-lwjgl3:${project.imguiVersion}"
+
 
     implementation "io.github.spair:imgui-java-natives-windows:${project.imguiVersion}"
-    shadow "io.github.spair:imgui-java-natives-windows:${project.imguiVersion}"
+
     implementation "io.github.spair:imgui-java-natives-linux:${project.imguiVersion}"
-    shadow "io.github.spair:imgui-java-natives-linux:${project.imguiVersion}"
+
     implementation "io.github.spair:imgui-java-natives-macos:${project.imguiVersion}"
-    shadow "io.github.spair:imgui-java-natives-macos:${project.imguiVersion}"
+
 }
 
 mixin {
@@ -166,4 +166,5 @@ publishing {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
 
