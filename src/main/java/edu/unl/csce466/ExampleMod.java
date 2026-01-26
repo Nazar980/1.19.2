@@ -37,11 +37,15 @@ public class ExampleMod {
 
         implGlfw.init(window, true);
 
-        // Фикс: просто вызываем без присваивания (возвращает void в твоей версии)
-        implGl3.init();  // или implGl3.init("#version 150"); если хочешь явно
+        // В 1.90+ часто работает без параметра
+        // Если краш — попробуй закомментировать и раскомментировать строку ниже
+        implGl3.init();  // основной вариант для 1.90+
+
+        // Альтернатива, если первый крашит:
+        // implGl3.init("#version 130");  // или 150, 330 core — пробуй по очереди
 
         initialized = true;
-        System.out.println("[ExampleMod] ImGui initialized!");
+        System.out.println("[ExampleMod] ImGui 1.90 initialized (backend OK)");
     }
 
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
@@ -53,12 +57,9 @@ public class ExampleMod {
             implGlfw.newFrame();
             ImGui.newFrame();
 
-            ImGui.begin("Пример GUI от ImGui");
-            ImGui.text("Привет! Это работает :)");
-            ImGui.text("Версия ImGui: " + ImGui.getVersion());
-            if (ImGui.button("Тест кнопка")) {
-                System.out.println("Кнопка нажата!");
-            }
+            ImGui.begin("ImGui 1.90 Test");
+            ImGui.text("Братан, если это видно — backend работает!");
+            ImGui.text("Версия: " + ImGui.getVersion());
             ImGui.end();
 
             ImGui.render();
