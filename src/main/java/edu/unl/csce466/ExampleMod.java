@@ -1,6 +1,8 @@
+package edu.unl.csce466;
+
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
@@ -21,23 +23,23 @@ import imgui.glfw.ImGuiImplGlfw;
 public class ExampleMod {
 
     private final Minecraft mc = Minecraft.getInstance();
-
     private ImGuiImplGlfw imGuiGlfw;
     private ImGuiImplGl3 imGuiGl3;
     private boolean initialized = false;
     private boolean showGui = false;
 
+    // WORKING KeyMapping for 1.19.2
     private final KeyMapping toggleKey = new KeyMapping(
             "key.examplemod.toggle",
             KeyConflictContext.IN_GAME,
-            KeyModifier.NONE,
             GLFW.GLFW_KEY_F,
             "key.categories.misc"
     );
 
     public ExampleMod() {
         MinecraftForge.EVENT_BUS.register(this);
-        net.minecraftforge.client.ClientRegistry.registerKeyMapping(toggleKey);
+        // Register key mapping the new way:
+        net.minecraftforge.client.settings.KeyMappingRegistry.register(toggleKey);
     }
 
     private void initImGui() {
@@ -59,7 +61,7 @@ public class ExampleMod {
 
     @SubscribeEvent
     public void onKeyPress(InputEvent.Key event) {
-        if (toggleKey.isDown()) {
+        if (toggleKey.consumeClick()) { // THIS toggles GUI on key press
             showGui = !showGui;
         }
     }
