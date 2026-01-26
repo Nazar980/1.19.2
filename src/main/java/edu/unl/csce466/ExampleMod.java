@@ -12,15 +12,14 @@ import net.minecraftforge.fml.common.Mod;
 
 @Mod(ExampleMod.MODID)
 public class ExampleMod {
-
     public static final String MODID = "examplemod";
 
+    // ImGui backend
     private static final ImGuiImplGlfw implGlfw = new ImGuiImplGlfw();
     private static final ImGuiImplGl3 implGl3 = new ImGuiImplGl3();
-
     private static boolean initialized = false;
 
-    // ❌ НИКАКОГО ImGui в конструкторе и clientSetup
+    // ❌ Никакого ImGui в конструкторе и clientSetup
 
     @Mod.EventBusSubscriber(
             modid = MODID,
@@ -31,8 +30,7 @@ public class ExampleMod {
 
         @SubscribeEvent
         public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Post event) {
-
-            // ✅ ИНИЦИАЛИЗАЦИЯ (ОДИН РАЗ, КОГДА GL КОНТЕКСТ УЖЕ ЕСТЬ)
+            // ✅ Инициализация один раз, когда GL контекст уже активен
             if (!initialized) {
                 long window = Minecraft.getInstance().getWindow().getWindow();
 
@@ -41,15 +39,17 @@ public class ExampleMod {
                 io.setIniFilename(null);
 
                 implGlfw.init(window, true);
-
-                // 🔑 КЛЮЧЕВОЕ МЕСТО — теперь OpenGL context активен
                 implGl3.init("#version 150");
+
+                // 🔑 Важно: добавить шрифт и собрать
+                io.getFonts().addFontDefault();
+                io.getFonts().build();
 
                 initialized = true;
                 System.out.println("[ExampleMod] ImGui initialized OK");
             }
 
-            // ✅ КАЖДЫЙ КАДР
+            // ✅ Каждый кадр
             implGlfw.newFrame();
             ImGui.newFrame();
 
