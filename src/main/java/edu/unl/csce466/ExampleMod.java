@@ -28,29 +28,20 @@ public class ExampleMod {
     }
 
     private void clientSetup(final FMLClientSetupEvent event) {
-        // Инициализация ImGui на клиенте (только один раз)
         long window = Minecraft.getInstance().getWindow().getWindow();
 
         ImGui.createContext();
         ImGuiIO io = ImGui.getIO();
-        io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard); // Включаем клавиатуру (опционально)
-        io.setIniFilename(null); // Отключаем сохранение настроек в файл
+        io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+        io.setIniFilename(null);
 
-        // GLFW backend
         implGlfw.init(window, true);
 
-        // OpenGL3 backend — без параметра, т.к. в 1.90+ init() без args использует дефолтный GLSL
-        // Если метод возвращает boolean — проверяем успех
-        boolean gl3Success = implGl3.init();  // ← основной фикс: принимаем boolean
-
-        if (!gl3Success) {
-            System.err.println("[ImGui Mod] Failed to initialize ImGui OpenGL3 backend!");
-            // Можно добавить: ImGui.destroyContext(); или просто отключить рендер
-            return;
-        }
+        // Фикс: просто вызываем без присваивания (возвращает void в твоей версии)
+        implGl3.init();  // или implGl3.init("#version 150"); если хочешь явно
 
         initialized = true;
-        System.out.println("[ImGui Mod] ImGui initialized successfully!");
+        System.out.println("[ExampleMod] ImGui initialized!");
     }
 
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
@@ -59,21 +50,17 @@ public class ExampleMod {
         public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Post event) {
             if (!initialized) return;
 
-            // Начинаем новый кадр ImGui
             implGlfw.newFrame();
             ImGui.newFrame();
 
-            // Простое тестовое окно
-            ImGui.begin("Пример GUI от ImGui в Minecraft");
+            ImGui.begin("Пример GUI от ImGui");
             ImGui.text("Привет! Это работает :)");
             ImGui.text("Версия ImGui: " + ImGui.getVersion());
-            ImGui.separator();
-            if (ImGui.button("Закрыть")) {
-                // Можно добавить логику выхода или скрытия
+            if (ImGui.button("Тест кнопка")) {
+                System.out.println("Кнопка нажата!");
             }
             ImGui.end();
 
-            // Финализируем кадр и рендерим
             ImGui.render();
             implGl3.renderDrawData(ImGui.getDrawData());
         }
