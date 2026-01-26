@@ -79,4 +79,6 @@ public class ExampleMod {
         ImGui.end();
 
         ImGui.render();
-        im
+        imGuiGl3.renderDrawData(ImGui.getDrawData());
+    }
+}
