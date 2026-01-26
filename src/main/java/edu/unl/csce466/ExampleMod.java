@@ -18,8 +18,6 @@ import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
-
-import edu.unl.csce466.screens.ImGuiScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.world.item.BlockItem;
@@ -69,109 +67,4 @@ public class ExampleMod{
 	// Creates a new BlockItem with the id "examplemod:example_block", combining the namespace and path
 	public static final RegistryObject<Item> EXAMPLE_BLOCK_ITEM = ITEMS.register("example_block", () -> new BlockItem(EXAMPLE_BLOCK.get(), new Item.Properties()));
 
-	public static final ImGuiScreen IMGUI_SCREEN = ImGuiScreen.getInstance();
-
-	public void Begin() {
-
-	}
-
-	public ExampleMod(){
-		IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-
-		// Register the commonSetup method for modloading
-		modEventBus.addListener(this::commonSetup);
-
-		// Register the Deferred Register to the mod event bus so blocks get registered
-		BLOCKS.register(modEventBus);
-		// Register the Deferred Register to the mod event bus so items get registered
-		ITEMS.register(modEventBus);
-
-		// Register ourselves for server and other game events we are interested in
-		MinecraftForge.EVENT_BUS.register(this);
-
-		MinecraftForge.EVENT_BUS.register(IMGUI_SCREEN);
-		// Register the item to a creative tab
-		modEventBus.addListener(this::addCreative);
-	}
-
-	public static class Zeus {
-
-		public void Init()
-		{
-			System.out.println("Zeus Activated");
-			Player player = Minecraft.getInstance().player;
-			player.sendSystemMessage(Component.literal("You feel a surge of electricity course through your veins..."));
-
-			ModEvents.ForgeEvents.start = true;
-		}
-
-		public void LevelUp()
-		{
-			Player player = Minecraft.getInstance().player;
-			player.giveExperienceLevels(50);
-		}
-
-		public void Health()
-		{
-			Player player = Minecraft.getInstance().player;
-			player.setAbsorptionAmount(100);
-		}
-
-		public void GiveDiamonds() {
-			Player player = Minecraft.getInstance().player;
-			ItemStack i = new ItemStack(Items.DIAMOND, 64);
-			ItemHandlerHelper.giveItemToPlayer(player, i);
-		}
-
-		public void Stick() {
-			Player player = Minecraft.getInstance().player;
-			ItemStack i = new ItemStack(Items.STICK, 1);
-			i.enchant(Enchantment.byId(16), 100);
-			ItemHandlerHelper.giveItemToPlayer(player, i);
-
-		}
-
-	}
-
-
-	private void commonSetup(final FMLCommonSetupEvent event){
-		// Some common setup code
-		LOGGER.info("HELLO FROM COMMON SETUP");
-		LOGGER.info("DIRT BLOCK >> {}", ForgeRegistries.BLOCKS.getKey(Blocks.DIRT));
-	}
-
-	private void addCreative(CreativeModeTabEvent.BuildContents event){
-		if (event.getTab() == CreativeModeTabs.BUILDING_BLOCKS)
-			event.accept(EXAMPLE_BLOCK_ITEM);
-	}
-
-	// You can use SubscribeEvent and let the Event Bus discover methods to call
-	@SubscribeEvent
-	public void onServerStarting(ServerStartingEvent event){
-		// Do something when the server starts
-		LOGGER.info("HELLO from server starting");
-	}
-
-	// You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
-	@Mod.EventBusSubscriber(modid = MODID,  bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-	public static class ClientModEvents {
-		@SubscribeEvent
-		public static void onClientSetup(FMLClientSetupEvent event) {
-			// Some client setup code
-			LOGGER.info("HELLO FROM CLIENT SETUP");
-			LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
-
-			IMGUI_SCREEN.getInstance().init();
-		}
-	}
-
-	@SubscribeEvent
-	public void onKeyInput(InputEvent.Key event){
-		if(Minecraft.getInstance().player == null) return;
-		if(Minecraft.getInstance().screen != null ) return;
-		if(event.getKey() == GLFW.GLFW_KEY_L){
-			LOGGER.info("L");
-			Minecraft.getInstance().setScreen(IMGUI_SCREEN);
-		}
-	}
 }
