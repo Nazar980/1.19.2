@@ -36,7 +36,7 @@ public class ExampleMod {
         io.setIniFilename(null); // Отключаем сохранение ini, если не нужно
 
         implGlfw.init(window, true);
-        implGl3.init("#version 150"); // Версия шейдера, подходящая для Minecraft
+        implGl3.init(); // Убрал параметр, т.к. в твоей версии ImGui-Java (1.86.10) метод init() без String glslVersion
         initialized = true;
     }
 
