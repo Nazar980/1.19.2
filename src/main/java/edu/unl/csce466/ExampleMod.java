@@ -1,16 +1,15 @@
-package com.example.examplemod;
-
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.settings.KeyConflictContext;
+import net.minecraftforge.client.settings.KeyModifier;
 import org.lwjgl.glfw.GLFW;
 import imgui.ImGui;
 import imgui.ImGuiIO;
@@ -28,13 +27,17 @@ public class ExampleMod {
     private boolean initialized = false;
     private boolean showGui = false;
 
-    private KeyMapping toggleKey;
+    private final KeyMapping toggleKey = new KeyMapping(
+            "key.examplemod.toggle",
+            KeyConflictContext.IN_GAME,
+            KeyModifier.NONE,
+            GLFW.GLFW_KEY_F,
+            "key.categories.misc"
+    );
 
     public ExampleMod() {
         MinecraftForge.EVENT_BUS.register(this);
-        toggleKey = new KeyMapping("key.examplemod.toggle", GLFW.GLFW_KEY_F, "key.categories.misc");
-        // Регистрируем клавишу
-        net.minecraftforge.client.ClientRegistry.registerKeyBinding(toggleKey);
+        net.minecraftforge.client.ClientRegistry.registerKeyMapping(toggleKey);
     }
 
     private void initImGui() {
@@ -55,7 +58,7 @@ public class ExampleMod {
     }
 
     @SubscribeEvent
-    public void onKeyPress(InputEvent.KeyInputEvent event) {
+    public void onKeyPress(InputEvent.Key event) {
         if (toggleKey.isDown()) {
             showGui = !showGui;
         }
@@ -65,18 +68,15 @@ public class ExampleMod {
     public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
         if (!showGui) return;
 
-        initImGui(); // инициализация при первом показе
+        initImGui();
 
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        // Пример окна ImGui
         ImGui.begin("Example Mod Window");
         ImGui.text("Hello, ImGui!");
         ImGui.text("Press F to toggle this window.");
         ImGui.end();
 
         ImGui.render();
-        imGuiGl3.renderDrawData(ImGui.getDrawData());
-    }
-}
+        im
