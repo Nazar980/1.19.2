@@ -1,65 +1,82 @@
-package edu.unl.csce466;
+package com.example.examplemod;
 
-import imgui.ImGui;
-import imgui.ImGuiIO;
-import imgui.gl3.ImGuiImplGl3;
-import imgui.glfw.ImGuiImplGlfw;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.lwjgl.glfw.GLFW;
+import imgui.ImGui;
+import imgui.ImGuiIO;
+import imgui.flag.ImGuiConfigFlags;
+import imgui.gl3.ImGuiImplGl3;
+import imgui.glfw.ImGuiImplGlfw;
 
-@Mod(ExampleMod.MODID)
+@Mod("examplemod")
 public class ExampleMod {
-    public static final String MODID = "examplemod";
 
-    // ImGui backend
-    private static final ImGuiImplGlfw implGlfw = new ImGuiImplGlfw();
-    private static final ImGuiImplGl3 implGl3 = new ImGuiImplGl3();
-    private static boolean initialized = false;
+    private final Minecraft mc = Minecraft.getInstance();
 
-    // ❌ Никакого ImGui в конструкторе и clientSetup
+    private ImGuiImplGlfw imGuiGlfw;
+    private ImGuiImplGl3 imGuiGl3;
+    private boolean initialized = false;
+    private boolean showGui = false;
 
-    @Mod.EventBusSubscriber(
-            modid = MODID,
-            bus = Mod.EventBusSubscriber.Bus.FORGE,
-            value = Dist.CLIENT
-    )
-    public static class ClientEvents {
+    private KeyMapping toggleKey;
 
-        @SubscribeEvent
-        public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Post event) {
-            // ✅ Инициализация один раз, когда GL контекст уже активен
-            if (!initialized) {
-                long window = Minecraft.getInstance().getWindow().getWindow();
+    public ExampleMod() {
+        MinecraftForge.EVENT_BUS.register(this);
+        toggleKey = new KeyMapping("key.examplemod.toggle", GLFW.GLFW_KEY_F, "key.categories.misc");
+        // Регистрируем клавишу
+        net.minecraftforge.client.ClientRegistry.registerKeyBinding(toggleKey);
+    }
 
-                ImGui.createContext();
-                ImGuiIO io = ImGui.getIO();
-                io.setIniFilename(null);
+    private void initImGui() {
+        if (initialized) return;
 
-                implGlfw.init(window, true);
-                implGl3.init("#version 150");
+        imGuiGlfw = new ImGuiImplGlfw();
+        imGuiGl3 = new ImGuiImplGl3();
 
-                // 🔑 Важно: добавить шрифт и собрать
-                io.getFonts().addFontDefault();
-                io.getFonts().build();
+        ImGui.createContext();
+        ImGuiIO io = ImGui.getIO();
+        io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
 
-                initialized = true;
-                System.out.println("[ExampleMod] ImGui initialized OK");
-            }
+        imGuiGlfw.init(mc.getWindow().getWindow(), true);
+        imGuiGl3.init("#version 150");
 
-            // ✅ Каждый кадр
-            implGlfw.newFrame();
-            ImGui.newFrame();
+        initialized = true;
+        System.out.println("[ExampleMod] ImGui initialized OK");
+    }
 
-            ImGui.begin("ImGui Test");
-            ImGui.text("Если ты это видишь — всё работает 😎");
-            ImGui.text("ImGui version: " + ImGui.getVersion());
-            ImGui.end();
-
-            ImGui.render();
-            implGl3.renderDrawData(ImGui.getDrawData());
+    @SubscribeEvent
+    public void onKeyPress(InputEvent.KeyInputEvent event) {
+        if (toggleKey.isDown()) {
+            showGui = !showGui;
         }
+    }
+
+    @SubscribeEvent
+    public void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
+        if (!showGui) return;
+
+        initImGui(); // инициализация при первом показе
+
+        imGuiGlfw.newFrame();
+        ImGui.newFrame();
+
+        // Пример окна ImGui
+        ImGui.begin("Example Mod Window");
+        ImGui.text("Hello, ImGui!");
+        ImGui.text("Press F to toggle this window.");
+        ImGui.end();
+
+        ImGui.render();
+        imGuiGl3.renderDrawData(ImGui.getDrawData());
     }
 }
