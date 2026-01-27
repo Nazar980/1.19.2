@@ -1,40 +1,107 @@
-private void createStandaloneWindow() {
-    new Thread(() -> {
-        GLFW.glfwInit();
-        long win = GLFW.glfwCreateWindow(800, 600, "ImGui Window", 0, 0);
-        GLFW.glfwMakeContextCurrent(win);
-        GL.createCapabilities();
+package edu.unl.csce466;
 
-        ImGui.createContext();
-        ImGuiIO io = ImGui.getIO();
-        io.setIniFilename(null);
+import imgui.ImGui;
+import imgui.ImGuiIO;
+import imgui.gl3.ImGuiImplGl3;
+import imgui.glfw.ImGuiImplGlfw;
+import net.minecraft.client.Minecraft;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.systems.RenderSystem;
 
-        ImGuiImplGlfw glfwImpl = new ImGuiImplGlfw();
-        ImGuiImplGl3 gl3Impl = new ImGuiImplGl3();
+@Mod(ExampleMod.MODID)
+@Mod.EventBusSubscriber(value = Dist.CLIENT)
+public class ExampleMod {
+    public static final String MODID = "examplemod";
 
-        glfwImpl.init(win, true);
-        gl3Impl.init("#version 330 core");
+    private static boolean showGui = false;
 
-        while (!GLFW.glfwWindowShouldClose(win)) {
-            GLFW.glfwPollEvents();
+    private static final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
+    private static final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
 
-            glfwImpl.newFrame();
-            ImGui.newFrame();
+    private static boolean initialized = false;
 
-            ImGui.begin("Standalone");
-            ImGui.text("Это отдельное окно!");
-            ImGui.end();
+    public ExampleMod() {
+        MinecraftForge.EVENT_BUS.register(this);
+    }
 
-            ImGui.render();
-            gl3Impl.renderDrawData(ImGui.getDrawData());
+    // Toggle на F (только когда нет открытого экрана)
+    @SubscribeEvent
+    public static void onKey(InputEvent.Key event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return;
 
-            GLFW.glfwSwapBuffers(win);
+        if (event.getKey() == GLFW.GLFW_KEY_F && event.getAction() == GLFW.GLFW_PRESS) {
+            showGui = !showGui;
+            System.out.println("[ExampleMod] Toggle GUI: " + showGui); // Для дебага
+        }
+    }
+
+    // Рендер ImGui каждый кадр после HUD
+    @SubscribeEvent
+    public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Post event) {
+        // Только после основного HUD (minecraft:all)
+        if (!event.getOverlay().id().getNamespace().equals("minecraft") ||
+            !event.getOverlay().id().getPath().equals("all")) {
+            return;
         }
 
-        gl3Impl.dispose();
-        glfwImpl.dispose();
-        ImGui.destroyContext();
-        GLFW.glfwDestroyWindow(win);
-        GLFW.glfwTerminate();
-    }, "ImGui Standalone").start();
+        if (!showGui) return;
+
+        // Защита от вызова из другого потока
+        if (!Thread.currentThread().getName().equals("Render thread")) {
+            System.err.println("[ImGui] Called from wrong thread: " + Thread.currentThread().getName());
+            return;
+        }
+
+        if (!initialized) {
+            System.out.println("[ExampleMod] Initializing ImGui...");
+
+            ImGui.createContext();
+            ImGuiIO io = ImGui.getIO();
+            io.setIniFilename(null);
+
+            long window = Minecraft.getInstance().getWindow().getWindow();
+            imGuiGlfw.init(window, true);
+            imGuiGl3.init("#version 150");
+
+            // Фикс assertion g.IO.Fonts->IsBuilt()
+            io.getFonts().build();
+
+            initialized = true;
+            System.out.println("[ExampleMod] ImGui initialized successfully!");
+        }
+
+        // Сохраняем состояние Minecraft, чтобы не сломать игру
+        RenderSystem.pushMatrix();
+        RenderSystem.disableDepthTest();
+        RenderSystem.disableCull();
+        RenderSystem.disableTexture();
+
+        imGuiGlfw.newFrame();
+        ImGui.newFrame();
+
+        // Простое окно
+        ImGui.begin("Test ImGui");
+        ImGui.text("Привет! Если ты это видишь — всё работает");
+        ImGui.text("Версия ImGui: " + ImGui.getVersion());
+        if (ImGui.button("Закрыть")) {
+            showGui = false;
+        }
+        ImGui.end();
+
+        ImGui.render();
+        imGuiGl3.renderDrawData(ImGui.getDrawData());
+
+        // Восстанавливаем состояние
+        RenderSystem.enableTexture();
+        RenderSystem.enableCull();
+        RenderSystem.enableDepthTest();
+        RenderSystem.popMatrix();
+    }
 }
