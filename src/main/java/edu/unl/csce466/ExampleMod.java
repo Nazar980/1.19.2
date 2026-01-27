@@ -12,7 +12,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.glfw.GLFW.glfwSwapBuffers;
+import org.lwjgl.glfw.GLFWWindowSizeCallback;
+import org.lwjgl.glfw.GLFWWindowRefreshCallback;
 
 @Mod(ExampleMod.MODID)
 @Mod.EventBusSubscriber(value = Dist.CLIENT)
@@ -26,29 +27,27 @@ public class ExampleMod {
 
     private static boolean initialized = false;
 
-    // GLFW callback — будет вызываться каждый кадр из Render thread
-    private static long originalSwapCallback = 0;
+    // GLFW callback — храним оригинальный
+    private static GLFWWindowRefreshCallback originalRefreshCallback;
 
     public ExampleMod() {
         MinecraftForge.EVENT_BUS.register(this);
 
-        // Устанавливаем свой callback на glfwSwapBuffers
-        setupGlfwSwapCallback();
+        // Устанавливаем callback на window refresh (вызывается после swap в Render thread)
+        setupGlfwCallback();
     }
 
-    private static void setupGlfwSwapCallback() {
+    private void setupGlfwCallback() {
         long window = Minecraft.getInstance().getWindow().getWindow();
 
-        // Сохраняем оригинальный callback (если был)
-        originalSwapCallback = GLFW.glfwSetSwapBuffersCallback(window, (long win) -> {
-            // Вызываем оригинальный swap (если был)
-            if (originalSwapCallback != 0) {
-                GLFW.glfwSwapBuffersCallback(originalSwapCallback).invoke(win);
-            } else {
-                glfwSwapBuffers(win);
+        // Сохраняем оригинальный refresh callback (если был)
+        originalRefreshCallback = GLFW.glfwSetWindowRefreshCallback(window, (long win) -> {
+            // Вызываем оригинальный callback (если был)
+            if (originalRefreshCallback != null) {
+                originalRefreshCallback.invoke(win);
             }
 
-            // Теперь безопасно рендерим ImGui (контекст активен!)
+            // Теперь рендерим ImGui — контекст активен!
             renderImGui();
         });
     }
@@ -76,18 +75,18 @@ public class ExampleMod {
             imGuiGlfw.init(window, true);
             imGuiGl3.init("#version 150");
 
-            // Фикс assertion: обязательно строим шрифты
+            // Обязательно строим шрифты — фикс assertion
             io.getFonts().build();
 
             initialized = true;
-            System.out.println("[ExampleMod] ImGui initialized in swap callback!");
+            System.out.println("[ExampleMod] ImGui initialized in GLFW refresh callback!");
         }
 
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        ImGui.begin("ExampleMod ImGui (без Mixin)");
-        ImGui.text("Привет! Работает через glfwSwapBuffers");
+        ImGui.begin("ExampleMod ImGui (no Mixin)");
+        ImGui.text("Привет! Работает через GLFW refresh callback");
         ImGui.text("Версия ImGui: " + ImGui.getVersion());
         ImGui.separator();
         ImGui.text("F — toggle");
