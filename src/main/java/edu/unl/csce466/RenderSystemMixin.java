@@ -9,8 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(RenderSystem.class)
 public class RenderSystemMixin {
-    // Фикс: SRG имя метода flipFrame в 1.19.2 official mappings — m_109147_(J)V
-    @Inject(method = "m_109147_(J)V", at = @At("HEAD"))
+    @Inject(method = "flipFrame(J)V", at = @At("HEAD"))
     private static void onFlipFrame(long window, CallbackInfo ci) {
         ExampleMod.renderImGui();
     }
