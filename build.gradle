@@ -76,7 +76,6 @@ dependencies {
     // =========================
     // MIXIN (только annotation processor, если нужен)
     // =========================
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
     // =========================
     // ImGui
@@ -103,7 +102,7 @@ jar {
                 "Implementation-Vendor"   : "examplemodsareus",
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
                 // Mixin config указывается здесь — Forge сам найдёт
-                "MixinConfigs"            : "forge-mixin.json"
+
         ])
     }
 }
@@ -121,3 +120,4 @@ publishing {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
