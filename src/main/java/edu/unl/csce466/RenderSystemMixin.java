@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(RenderSystem.class)
 public class RenderSystemMixin {
-    @Inject(method = "flipFrame(J)V", at = @At("HEAD"))
+    @Inject(method = "flipFrame(J)V", at = @At("HEAD"), remap = false)  // ← remap = false отключает remapping
     private static void onFlipFrame(long window, CallbackInfo ci) {
         ExampleMod.renderImGui();
     }
