@@ -11,6 +11,8 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFW.glfwSwapBuffers;
 
 @Mod(ExampleMod.MODID)
 @Mod.EventBusSubscriber(value = Dist.CLIENT)
@@ -18,26 +20,51 @@ public class ExampleMod {
     public static final String MODID = "examplemod";
 
     private static boolean showGui = false;
-    private static boolean lastFState = false;
 
     private static final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
     private static final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
 
     private static boolean initialized = false;
 
+    // GLFW callback — будет вызываться каждый кадр из Render thread
+    private static long originalSwapCallback = 0;
+
     public ExampleMod() {
         MinecraftForge.EVENT_BUS.register(this);
+
+        // Устанавливаем свой callback на glfwSwapBuffers
+        setupGlfwSwapCallback();
     }
 
+    private static void setupGlfwSwapCallback() {
+        long window = Minecraft.getInstance().getWindow().getWindow();
+
+        // Сохраняем оригинальный callback (если был)
+        originalSwapCallback = GLFW.glfwSetSwapBuffersCallback(window, (long win) -> {
+            // Вызываем оригинальный swap (если был)
+            if (originalSwapCallback != 0) {
+                GLFW.glfwSwapBuffersCallback(originalSwapCallback).invoke(win);
+            } else {
+                glfwSwapBuffers(win);
+            }
+
+            // Теперь безопасно рендерим ImGui (контекст активен!)
+            renderImGui();
+        });
+    }
+
+    // Toggle на F
     @SubscribeEvent
     public static void onKey(InputEvent.Key event) {
-        if (Minecraft.getInstance().screen != null) return; // Не мешать в меню/инвентаре
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen != null) return;
+
         if (event.getKey() == GLFW.GLFW_KEY_F && event.getAction() == GLFW.GLFW_PRESS) {
             showGui = !showGui;
         }
     }
 
-    public static void renderImGui() {
+    private static void renderImGui() {
         if (!showGui) return;
 
         if (!initialized) {
@@ -45,26 +72,25 @@ public class ExampleMod {
             ImGuiIO io = ImGui.getIO();
             io.setIniFilename(null);
 
-            imGuiGlfw.init(Minecraft.getInstance().getWindow().getWindow(), true);
-
-            // В 1.90.0 init с параметром работает стабильно
+            long window = Minecraft.getInstance().getWindow().getWindow();
+            imGuiGlfw.init(window, true);
             imGuiGl3.init("#version 150");
 
-            // 🔥 ФИКС АССЕРТА: строим шрифты сразу после init
+            // Фикс assertion: обязательно строим шрифты
             io.getFonts().build();
 
             initialized = true;
-            System.out.println("[ExampleMod] ImGui initialized successfully!");
+            System.out.println("[ExampleMod] ImGui initialized in swap callback!");
         }
 
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        ImGui.begin("ExampleMod ImGui GUI");
-        ImGui.text("Привет! ImGui работает на 1.19.2");
+        ImGui.begin("ExampleMod ImGui (без Mixin)");
+        ImGui.text("Привет! Работает через glfwSwapBuffers");
         ImGui.text("Версия ImGui: " + ImGui.getVersion());
         ImGui.separator();
-        ImGui.text("Нажми F для скрытия");
+        ImGui.text("F — toggle");
         if (ImGui.button("Закрыть")) {
             showGui = false;
         }
