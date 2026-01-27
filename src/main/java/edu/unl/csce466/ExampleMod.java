@@ -70,7 +70,7 @@ public class ExampleMod {
             imGuiGlfw.init(window, true);
             imGuiGl3.init("#version 150");
 
-            // Фикс assertion
+            // Фикс assertion "Fonts->IsBuilt()"
             io.getFonts().build();
 
             initialized = true;
@@ -78,7 +78,7 @@ public class ExampleMod {
         }
 
         // Сохраняем GL-состояние Minecraft
-        RenderSystem.getModelViewStack().pushMatrix();
+        RenderSystem.getModelViewStack().pushPose();
         RenderSystem.disableDepthTest();
         RenderSystem.disableCull();
         RenderSystem.disableTexture();
@@ -102,6 +102,6 @@ public class ExampleMod {
         RenderSystem.enableTexture();
         RenderSystem.enableCull();
         RenderSystem.enableDepthTest();
-        RenderSystem.getModelViewStack().popMatrix();
+        RenderSystem.getModelViewStack().popPose();
     }
 }
