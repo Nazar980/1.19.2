@@ -7,9 +7,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(RenderSystem.class)
+@Mixin(value = RenderSystem.class, remap = false)  // Отключаем remap для всего класса
 public class RenderSystemMixin {
-    @Inject(method = "flipFrame(J)V", at = @At("HEAD"), remap = false)  // ← remap = false отключает remapping
+    @Inject(method = "flipFrame(J)V", at = @At("HEAD"), remap = false)  // Повторно отключаем remap
     private static void onFlipFrame(long window, CallbackInfo ci) {
         ExampleMod.renderImGui();
     }
