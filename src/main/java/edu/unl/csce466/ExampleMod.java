@@ -34,7 +34,12 @@ public class ExampleMod {
 
         ImGui.createContext();
         ImGuiIO io = ImGui.getIO();
+        io.setIniFilename(null);
         io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+
+        // ❗❗❗ ОБЯЗАТЕЛЬНО
+        io.getFonts().addFontDefault();
+        io.getFonts().build();
 
         imGuiGlfw = new ImGuiImplGlfw();
         imGuiGl3 = new ImGuiImplGl3();
@@ -53,9 +58,8 @@ public class ExampleMod {
 
         long window = mc.getWindow().getWindow();
 
-        // ===== GLFW KEY CHECK (EDGE DETECT) =====
+        // ===== GLFW EDGE CHECK =====
         boolean fPressed = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_F) == GLFW.GLFW_PRESS;
-
         if (fPressed && !lastFState) {
             showGui = !showGui;
         }
