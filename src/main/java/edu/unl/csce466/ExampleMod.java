@@ -10,6 +10,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
@@ -23,24 +24,76 @@ public class ExampleMod {
     private static ImGuiImplGlfw imGuiGlfw;
     private static ImGuiImplGl3 imGuiGl3;
 
+    private static boolean wasInGame = false; // Флаг — были ли уже в мире
+
     public ExampleMod() {
         MinecraftForge.EVENT_BUS.register(this);
+        System.out.println("[ExampleMod] Mod loaded — waiting for player join");
     }
 
+    // Проверяем каждый тик, зашёл ли игрок в мир
     @SubscribeEvent
-    public void onKey(InputEvent.Key event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null) return; // Не трогаем в меню
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
 
-        if (event.getKey() == GLFW.GLFW_KEY_F && event.getAction() == GLFW.GLFW_PRESS) {
-            showGui = !showGui;
-            System.out.println("[ExampleMod] GUI toggled: " + showGui);
+        Minecraft mc = Minecraft.getInstance();
+
+        // Если игрок появился и раньше его не было — это момент входа в мир
+        if (mc.player != null && !wasInGame) {
+            wasInGame = true;
+            System.out.println("[ExampleMod] Player joined world — starting ImGui init");
+
+            initImGui();
+        }
+
+        // Если вышли из мира (игрок пропал) — сбрасываем флаг
+        if (mc.player == null) {
+            wasInGame = false;
         }
     }
 
+    private void initImGui() {
+        if (initialized) return;
+
+        System.out.println("[ExampleMod] ImGui initialization started...");
+
+        ImGui.createContext();
+        ImGuiIO io = ImGui.getIO();
+        io.setIniFilename(null);
+        io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+
+        long window = Minecraft.getInstance().getWindow().getWindow();
+        imGuiGlfw = new ImGuiImplGlfw();
+        imGuiGl3 = new ImGuiImplGl3();
+
+        imGuiGlfw.init(window, true);
+        imGuiGl3.init("#version 150");
+
+        // Шрифты — обязательно после init
+        io.getFonts().addFontDefault();
+        io.getFonts().build();
+
+        ImGui.styleColorsDark();
+
+        initialized = true;
+        System.out.println("[ExampleMod] ImGui initialized SUCCESSFULLY!");
+    }
+
+    // Toggle на F
+    @SubscribeEvent
+    public void onKey(InputEvent.Key event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.screen != null) return;
+
+        if (event.getKey() == GLFW.GLFW_KEY_F && event.getAction() == GLFW.GLFW_PRESS) {
+            showGui = !showGui;
+            System.out.println("[ExampleMod] F pressed → GUI toggled: " + showGui);
+        }
+    }
+
+    // Рендер ImGui каждый кадр после HUD
     @SubscribeEvent
     public void onRenderGui(RenderGuiOverlayEvent.Post event) {
-        // Только после основного HUD
         if (!event.getOverlay().id().getNamespace().equals("minecraft") ||
             !event.getOverlay().id().getPath().equals("all")) {
             return;
@@ -48,41 +101,18 @@ public class ExampleMod {
 
         if (!showGui) return;
 
-        // Защита от другого потока
         if (!Thread.currentThread().getName().equals("Render thread")) {
             System.err.println("[ImGui] Wrong thread: " + Thread.currentThread().getName());
             return;
         }
 
         if (!initialized) {
-            System.out.println("[ExampleMod] Starting ImGui initialization...");
-
-            ImGui.createContext();
-            ImGuiIO io = ImGui.getIO();
-            io.setIniFilename(null);
-            io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
-
-            long window = Minecraft.getInstance().getWindow().getWindow();
-
-            imGuiGlfw = new ImGuiImplGlfw();
-            imGuiGl3 = new ImGuiImplGl3();
-
-            imGuiGlfw.init(window, true);
-            imGuiGl3.init("#version 150");
-
-            // Шрифты — обязательно после init
-            io.getFonts().addFontDefault();
-            io.getFonts().build();
-
-            // Тёмная тема + скругление
-            ImGui.styleColorsDark();
-            ImGui.getStyle().setWindowRounding(8.0f);
-
-            initialized = true;
-            System.out.println("[ExampleMod] ImGui initialized successfully!");
+            System.out.println("[ImGui] Skip render — not initialized yet");
+            return;
         }
 
-        // Сохраняем и сбрасываем GL-состояние Minecraft
+        System.out.println("[ImGui] Rendering frame...");
+
         RenderSystem.getModelViewStack().pushPose();
         RenderSystem.disableDepthTest();
         RenderSystem.disableCull();
@@ -92,14 +122,14 @@ public class ExampleMod {
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        // 🔥 Тестовое демо-окно — чтобы сразу увидеть, что рендер работает
+        // Тестовое демо-окно — чтобы точно увидеть, что рендер идёт
         ImGui.showDemoWindow();
 
-        // Твоё окно — принудительно в центре
+        // Твоё окно
         ImGui.setNextWindowPos(200, 200);
-        ImGui.setNextWindowSize(500, 400);
+        ImGui.setNextWindowSize(600, 400);
         ImGui.begin("ExampleMod GUI");
-        ImGui.text("Если ты это видишь — всё работает!");
+        ImGui.text("Автоматическая инициализация при входе в мир");
         ImGui.text("Версия ImGui: " + ImGui.getVersion());
         ImGui.text("F — toggle");
         if (ImGui.button("Закрыть")) {
@@ -110,7 +140,6 @@ public class ExampleMod {
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
 
-        // Восстанавливаем состояние
         RenderSystem.enableBlend();
         RenderSystem.enableTexture();
         RenderSystem.enableCull();
