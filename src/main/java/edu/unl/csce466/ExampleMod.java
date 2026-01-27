@@ -4,6 +4,7 @@ import imgui.ImGui;
 import imgui.ImGuiIO;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
+import imgui.flag.ImGuiConfigFlags;  // ← ЭТОТ ИМПОРТ ДОБАВЬ!
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
@@ -45,6 +46,7 @@ public class ExampleMod {
     // Рендер ImGui каждый кадр после HUD
     @SubscribeEvent
     public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Post event) {
+        // Только после основного HUD (minecraft:all)
         if (!event.getOverlay().id().getNamespace().equals("minecraft") ||
             !event.getOverlay().id().getPath().equals("all")) {
             return;
@@ -52,6 +54,7 @@ public class ExampleMod {
 
         if (!showGui) return;
 
+        // Защита от другого потока
         if (!Thread.currentThread().getName().equals("Render thread")) {
             System.err.println("[ImGui] Wrong thread: " + Thread.currentThread().getName());
             return;
@@ -65,37 +68,32 @@ public class ExampleMod {
             ImGui.createContext();
             ImGuiIO io = ImGui.getIO();
             io.setIniFilename(null);
-            io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
+            io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);  // ← Теперь работает
 
             long window = Minecraft.getInstance().getWindow().getWindow();
             imGuiGlfw.init(window, true);
             imGuiGl3.init("#version 150");
 
-            // Фикс assertion
             io.getFonts().build();
-
-            // Принудительно ставим тему и позицию
-            ImGui.styleColorsDark();
-            ImGui.getStyle().setWindowRounding(8.0f);
 
             initialized = true;
             System.out.println("[ExampleMod] ImGui initialized OK! Fonts built.");
         }
 
-        // Сохраняем и сбрасываем GL-состояние
+        // Сохраняем GL-состояние
         RenderSystem.getModelViewStack().pushPose();
         RenderSystem.disableDepthTest();
         RenderSystem.disableCull();
         RenderSystem.disableTexture();
-        RenderSystem.disableBlend();  // Добавлено — иногда blend сбивает ImGui
+        RenderSystem.disableBlend();
 
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        // 🔥 Большое демо-окно — чтобы сразу увидеть, работает ли рендер
+        // 🔥 Демо-окно для теста (удали потом)
         ImGui.showDemoWindow();
 
-        // Твоё окно — принудительно в центре
+        // Твоё окно
         ImGui.setNextWindowPos(200, 200);
         ImGui.setNextWindowSize(500, 400);
         ImGui.begin("Test ImGui Window");
