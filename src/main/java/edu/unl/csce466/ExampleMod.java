@@ -30,11 +30,11 @@ public class ExampleMod {
         MinecraftForge.EVENT_BUS.register(this);
     }
 
-    // Toggle на F (только когда нет открытого экрана)
+    // Toggle на F
     @SubscribeEvent
     public static void onKey(InputEvent.Key event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null) return; // Не трогаем в меню/инвентаре
+        if (mc.screen != null) return;
 
         if (event.getKey() == GLFW.GLFW_KEY_F && event.getAction() == GLFW.GLFW_PRESS) {
             showGui = !showGui;
@@ -45,7 +45,6 @@ public class ExampleMod {
     // Рендер ImGui каждый кадр после HUD
     @SubscribeEvent
     public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Post event) {
-        // Только после основного HUD (minecraft:all)
         if (!event.getOverlay().id().getNamespace().equals("minecraft") ||
             !event.getOverlay().id().getPath().equals("all")) {
             return;
@@ -53,47 +52,56 @@ public class ExampleMod {
 
         if (!showGui) return;
 
-        // Защита от вызова из другого потока
         if (!Thread.currentThread().getName().equals("Render thread")) {
             System.err.println("[ImGui] Wrong thread: " + Thread.currentThread().getName());
             return;
         }
 
+        System.out.println("[ImGui] Rendering frame... showGui=" + showGui + ", initialized=" + initialized);
+
         if (!initialized) {
-            System.out.println("[ExampleMod] Starting ImGui initialization...");
+            System.out.println("[ExampleMod] Starting ImGui init...");
 
             ImGui.createContext();
             ImGuiIO io = ImGui.getIO();
             io.setIniFilename(null);
+            io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
 
             long window = Minecraft.getInstance().getWindow().getWindow();
             imGuiGlfw.init(window, true);
             imGuiGl3.init("#version 150");
 
-            // Обязательно строим шрифты — фикс assertion "Fonts->IsBuilt()"
+            // Фикс assertion
             io.getFonts().build();
 
+            // Принудительно ставим тему и позицию
+            ImGui.styleColorsDark();
+            ImGui.getStyle().setWindowRounding(8.0f);
+
             initialized = true;
-            System.out.println("[ExampleMod] ImGui initialized successfully!");
+            System.out.println("[ExampleMod] ImGui initialized OK! Fonts built.");
         }
 
-        // Сохраняем GL-состояние Minecraft
+        // Сохраняем и сбрасываем GL-состояние
         RenderSystem.getModelViewStack().pushPose();
         RenderSystem.disableDepthTest();
         RenderSystem.disableCull();
         RenderSystem.disableTexture();
+        RenderSystem.disableBlend();  // Добавлено — иногда blend сбивает ImGui
 
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        // 🔥 Добавляем демо-окно ImGui для теста (удали потом, если не нужно)
+        // 🔥 Большое демо-окно — чтобы сразу увидеть, работает ли рендер
         ImGui.showDemoWindow();
 
-        // Твоё основное окно
-        ImGui.begin("My ImGui Window");
-        ImGui.text("Привет! Это работает без миксинов");
+        // Твоё окно — принудительно в центре
+        ImGui.setNextWindowPos(200, 200);
+        ImGui.setNextWindowSize(500, 400);
+        ImGui.begin("Test ImGui Window");
+        ImGui.text("Если ты это видишь — GUI работает!");
         ImGui.text("Версия ImGui: " + ImGui.getVersion());
-        ImGui.text("F — показать/скрыть");
+        ImGui.text("F — toggle");
         if (ImGui.button("Закрыть")) {
             showGui = false;
         }
@@ -102,7 +110,8 @@ public class ExampleMod {
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
 
-        // Восстанавливаем состояние Minecraft
+        // Восстанавливаем
+        RenderSystem.enableBlend();
         RenderSystem.enableTexture();
         RenderSystem.enableCull();
         RenderSystem.enableDepthTest();
