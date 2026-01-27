@@ -30,11 +30,11 @@ public class ExampleMod {
         MinecraftForge.EVENT_BUS.register(this);
     }
 
-    // Toggle на F
+    // Toggle на F (только когда нет открытого экрана)
     @SubscribeEvent
     public static void onKey(InputEvent.Key event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null) return;
+        if (mc.screen != null) return; // Не трогаем в меню/инвентаре
 
         if (event.getKey() == GLFW.GLFW_KEY_F && event.getAction() == GLFW.GLFW_PRESS) {
             showGui = !showGui;
@@ -53,14 +53,14 @@ public class ExampleMod {
 
         if (!showGui) return;
 
-        // Защита от другого потока
+        // Защита от вызова из другого потока
         if (!Thread.currentThread().getName().equals("Render thread")) {
             System.err.println("[ImGui] Wrong thread: " + Thread.currentThread().getName());
             return;
         }
 
         if (!initialized) {
-            System.out.println("[ExampleMod] Initializing ImGui...");
+            System.out.println("[ExampleMod] Starting ImGui initialization...");
 
             ImGui.createContext();
             ImGuiIO io = ImGui.getIO();
@@ -70,11 +70,11 @@ public class ExampleMod {
             imGuiGlfw.init(window, true);
             imGuiGl3.init("#version 150");
 
-            // Фикс assertion "Fonts->IsBuilt()"
+            // Обязательно строим шрифты — фикс assertion "Fonts->IsBuilt()"
             io.getFonts().build();
 
             initialized = true;
-            System.out.println("[ExampleMod] ImGui initialized OK!");
+            System.out.println("[ExampleMod] ImGui initialized successfully!");
         }
 
         // Сохраняем GL-состояние Minecraft
@@ -86,10 +86,14 @@ public class ExampleMod {
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        ImGui.begin("Simple ImGui Test");
-        ImGui.text("Привет! Если ты это видишь — всё работает");
+        // 🔥 Добавляем демо-окно ImGui для теста (удали потом, если не нужно)
+        ImGui.showDemoWindow();
+
+        // Твоё основное окно
+        ImGui.begin("My ImGui Window");
+        ImGui.text("Привет! Это работает без миксинов");
         ImGui.text("Версия ImGui: " + ImGui.getVersion());
-        ImGui.text("F — toggle");
+        ImGui.text("F — показать/скрыть");
         if (ImGui.button("Закрыть")) {
             showGui = false;
         }
@@ -98,7 +102,7 @@ public class ExampleMod {
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
 
-        // Восстанавливаем состояние
+        // Восстанавливаем состояние Minecraft
         RenderSystem.enableTexture();
         RenderSystem.enableCull();
         RenderSystem.enableDepthTest();
