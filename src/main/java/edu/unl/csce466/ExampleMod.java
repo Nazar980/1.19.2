@@ -1,80 +1,83 @@
 package edu.unl.csce466;
 
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.opengl.GL;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.platform.Window;
-
 import imgui.ImGui;
 import imgui.ImGuiIO;
 import imgui.flag.ImGuiConfigFlags;
 import imgui.glfw.ImGuiImplGlfw;
 import imgui.gl3.ImGuiImplGl3;
+import net.minecraft.client.Minecraft;
+import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import org.lwjgl.glfw.GLFW;
 
 @Mod("examplemod")
-@EventBusSubscriber(modid = "examplemod", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ExampleMod {
 
     private static boolean showGui = false;
+    private static boolean lastFState = false;
 
-    private ImGuiImplGlfw imGuiGlfw;
-    private ImGuiImplGl3 imGuiGl3;
+    private static boolean imguiInit = false;
+    private static ImGuiImplGlfw imGuiGlfw;
+    private static ImGuiImplGl3 imGuiGl3;
 
     public ExampleMod() {
-        // Клиентская инициализация через EventBus
-        net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus().addListener(this::clientSetup);
+        MinecraftForge.EVENT_BUS.register(this);
     }
 
-    private void clientSetup(final FMLClientSetupEvent event) {
-        // Инициализация ImGui
-        imGuiGlfw = new ImGuiImplGlfw();
-        imGuiGl3 = new ImGuiImplGl3();
+    private static void initImGui() {
+        if (imguiInit) return;
+
+        long windowHandle = Minecraft.getInstance().getWindow().getWindow();
 
         ImGui.createContext();
         ImGuiIO io = ImGui.getIO();
         io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
 
-        // Используем GLFW для проверки нажатия F
-        new Thread(() -> {
-            while (true) {
-                try {
-                    Thread.sleep(10); // простая пауза чтобы не забивать CPU
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                // Проверяем GLFW key
-                if (GLFW.glfwGetKey(getWindowHandle(), GLFW.GLFW_KEY_F) == GLFW.GLFW_PRESS) {
-                    showGui = !showGui; // переключаем
-                    try {
-                        Thread.sleep(200); // антидребезг
-                    } catch (InterruptedException ignored) {}
-                }
-            }
-        }).start();
+        imGuiGlfw = new ImGuiImplGlfw();
+        imGuiGl3 = new ImGuiImplGl3();
+
+        imGuiGlfw.init(windowHandle, true);
+        imGuiGl3.init("#version 150");
+
+        imguiInit = true;
+        System.out.println("[ExampleMod] ImGui initialized");
     }
 
-    // Нужно вызвать каждый рендер кадр
-    public void renderGui() {
+    @SubscribeEvent
+    public void onRenderGui(RenderGuiOverlayEvent.Post event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+
+        long window = mc.getWindow().getWindow();
+
+        // ===== GLFW KEY CHECK (EDGE DETECT) =====
+        boolean fPressed = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_F) == GLFW.GLFW_PRESS;
+
+        if (fPressed && !lastFState) {
+            showGui = !showGui;
+        }
+        lastFState = fPressed;
+
         if (!showGui) return;
+
+        initImGui();
+
+        RenderSystem.disableDepthTest();
 
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        ImGui.begin("Example Mod GUI");
-        ImGui.text("ImGui включён через F!");
+        ImGui.begin("ExampleMod");
+        ImGui.text("ImGui работает");
+        ImGui.text("Открывается по F");
         ImGui.end();
 
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
-    }
 
-    private long getWindowHandle() {
-        // Получаем хэндл окна Minecraft
-        Window window = net.minecraft.client.Minecraft.getInstance().getWindow();
-        return window.getWindow();
+        RenderSystem.enableDepthTest();
     }
 }
