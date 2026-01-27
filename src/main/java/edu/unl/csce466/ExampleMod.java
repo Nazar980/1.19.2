@@ -4,7 +4,7 @@ import imgui.ImGui;
 import imgui.ImGuiIO;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
-import imgui.flag.ImGuiConfigFlags;  // ← ЭТОТ ИМПОРТ ДОБАВЬ!
+import imgui.flag.ImGuiConfigFlags;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
@@ -15,27 +15,22 @@ import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 import com.mojang.blaze3d.systems.RenderSystem;
 
-@Mod(ExampleMod.MODID)
-@Mod.EventBusSubscriber(value = Dist.CLIENT)
+@Mod("examplemod")
 public class ExampleMod {
-    public static final String MODID = "examplemod";
-
     private static boolean showGui = false;
 
-    private static final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
-    private static final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
-
     private static boolean initialized = false;
+    private static ImGuiImplGlfw imGuiGlfw;
+    private static ImGuiImplGl3 imGuiGl3;
 
     public ExampleMod() {
         MinecraftForge.EVENT_BUS.register(this);
     }
 
-    // Toggle на F
     @SubscribeEvent
-    public static void onKey(InputEvent.Key event) {
+    public void onKey(InputEvent.Key event) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen != null) return;
+        if (mc.screen != null) return; // Не трогаем в меню
 
         if (event.getKey() == GLFW.GLFW_KEY_F && event.getAction() == GLFW.GLFW_PRESS) {
             showGui = !showGui;
@@ -43,10 +38,9 @@ public class ExampleMod {
         }
     }
 
-    // Рендер ImGui каждый кадр после HUD
     @SubscribeEvent
-    public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Post event) {
-        // Только после основного HUD (minecraft:all)
+    public void onRenderGui(RenderGuiOverlayEvent.Post event) {
+        // Только после основного HUD
         if (!event.getOverlay().id().getNamespace().equals("minecraft") ||
             !event.getOverlay().id().getPath().equals("all")) {
             return;
@@ -60,27 +54,35 @@ public class ExampleMod {
             return;
         }
 
-        System.out.println("[ImGui] Rendering frame... showGui=" + showGui + ", initialized=" + initialized);
-
         if (!initialized) {
-            System.out.println("[ExampleMod] Starting ImGui init...");
+            System.out.println("[ExampleMod] Starting ImGui initialization...");
 
             ImGui.createContext();
             ImGuiIO io = ImGui.getIO();
             io.setIniFilename(null);
-            io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);  // ← Теперь работает
+            io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
 
             long window = Minecraft.getInstance().getWindow().getWindow();
+
+            imGuiGlfw = new ImGuiImplGlfw();
+            imGuiGl3 = new ImGuiImplGl3();
+
             imGuiGlfw.init(window, true);
             imGuiGl3.init("#version 150");
 
+            // Шрифты — обязательно после init
+            io.getFonts().addFontDefault();
             io.getFonts().build();
 
+            // Тёмная тема + скругление
+            ImGui.styleColorsDark();
+            ImGui.getStyle().setWindowRounding(8.0f);
+
             initialized = true;
-            System.out.println("[ExampleMod] ImGui initialized OK! Fonts built.");
+            System.out.println("[ExampleMod] ImGui initialized successfully!");
         }
 
-        // Сохраняем GL-состояние
+        // Сохраняем и сбрасываем GL-состояние Minecraft
         RenderSystem.getModelViewStack().pushPose();
         RenderSystem.disableDepthTest();
         RenderSystem.disableCull();
@@ -90,14 +92,14 @@ public class ExampleMod {
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        // 🔥 Демо-окно для теста (удали потом)
+        // 🔥 Тестовое демо-окно — чтобы сразу увидеть, что рендер работает
         ImGui.showDemoWindow();
 
-        // Твоё окно
+        // Твоё окно — принудительно в центре
         ImGui.setNextWindowPos(200, 200);
         ImGui.setNextWindowSize(500, 400);
-        ImGui.begin("Test ImGui Window");
-        ImGui.text("Если ты это видишь — GUI работает!");
+        ImGui.begin("ExampleMod GUI");
+        ImGui.text("Если ты это видишь — всё работает!");
         ImGui.text("Версия ImGui: " + ImGui.getVersion());
         ImGui.text("F — toggle");
         if (ImGui.button("Закрыть")) {
@@ -108,7 +110,7 @@ public class ExampleMod {
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
 
-        // Восстанавливаем
+        // Восстанавливаем состояние
         RenderSystem.enableBlend();
         RenderSystem.enableTexture();
         RenderSystem.enableCull();
