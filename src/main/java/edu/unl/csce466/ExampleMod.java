@@ -30,7 +30,7 @@ public class ExampleMod {
         MinecraftForge.EVENT_BUS.register(this);
     }
 
-    // Toggle на F (только когда нет открытого экрана)
+    // Toggle на F
     @SubscribeEvent
     public static void onKey(InputEvent.Key event) {
         Minecraft mc = Minecraft.getInstance();
@@ -38,7 +38,7 @@ public class ExampleMod {
 
         if (event.getKey() == GLFW.GLFW_KEY_F && event.getAction() == GLFW.GLFW_PRESS) {
             showGui = !showGui;
-            System.out.println("[ExampleMod] Toggle GUI: " + showGui); // Для дебага
+            System.out.println("[ExampleMod] GUI toggled: " + showGui);
         }
     }
 
@@ -53,9 +53,9 @@ public class ExampleMod {
 
         if (!showGui) return;
 
-        // Защита от вызова из другого потока
+        // Защита от другого потока
         if (!Thread.currentThread().getName().equals("Render thread")) {
-            System.err.println("[ImGui] Called from wrong thread: " + Thread.currentThread().getName());
+            System.err.println("[ImGui] Wrong thread: " + Thread.currentThread().getName());
             return;
         }
 
@@ -70,15 +70,15 @@ public class ExampleMod {
             imGuiGlfw.init(window, true);
             imGuiGl3.init("#version 150");
 
-            // Фикс assertion g.IO.Fonts->IsBuilt()
+            // Фикс assertion
             io.getFonts().build();
 
             initialized = true;
-            System.out.println("[ExampleMod] ImGui initialized successfully!");
+            System.out.println("[ExampleMod] ImGui initialized OK!");
         }
 
-        // Сохраняем состояние Minecraft, чтобы не сломать игру
-        RenderSystem.pushMatrix();
+        // Сохраняем GL-состояние Minecraft
+        RenderSystem.getModelViewStack().pushMatrix();
         RenderSystem.disableDepthTest();
         RenderSystem.disableCull();
         RenderSystem.disableTexture();
@@ -86,10 +86,10 @@ public class ExampleMod {
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        // Простое окно
-        ImGui.begin("Test ImGui");
+        ImGui.begin("Simple ImGui Test");
         ImGui.text("Привет! Если ты это видишь — всё работает");
         ImGui.text("Версия ImGui: " + ImGui.getVersion());
+        ImGui.text("F — toggle");
         if (ImGui.button("Закрыть")) {
             showGui = false;
         }
@@ -102,6 +102,6 @@ public class ExampleMod {
         RenderSystem.enableTexture();
         RenderSystem.enableCull();
         RenderSystem.enableDepthTest();
-        RenderSystem.popMatrix();
+        RenderSystem.getModelViewStack().popMatrix();
     }
 }
