@@ -1,90 +1,72 @@
 package edu.unl.csce466;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import imgui.ImGui;
-import imgui.ImGuiIO;
-import imgui.flag.ImGuiConfigFlags;
-import imgui.glfw.ImGuiImplGlfw;
 import imgui.gl3.ImGuiImplGl3;
+import imgui.glfw.ImGuiImplGlfw;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 
-@Mod("examplemod")
+@Mod(ExampleMod.MODID)
+@Mod.EventBusSubscriber(value = Dist.CLIENT)
 public class ExampleMod {
+
+    public static final String MODID = "examplemod";
 
     private static boolean showGui = false;
     private static boolean lastFState = false;
 
-    private static boolean imguiInit = false;
-    private static ImGuiImplGlfw imGuiGlfw;
-    private static ImGuiImplGl3 imGuiGl3;
+    private static final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
+    private static final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
+    private static boolean initialized = false;
 
     public ExampleMod() {
         MinecraftForge.EVENT_BUS.register(this);
     }
 
-    private static void initImGui() {
-        if (imguiInit) return;
+    // 🔥 GLFW F toggle
+    @SubscribeEvent
+    public static void onKey(InputEvent.Key event) {
+        if (Minecraft.getInstance().player == null) return;
 
-        long window = Minecraft.getInstance().getWindow().getWindow();
-
-        ImGui.createContext();
-        ImGuiIO io = ImGui.getIO();
-        io.setIniFilename(null);
-        io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
-
-        io.getFonts().addFontDefault();
-        io.getFonts().build();
-
-        imGuiGlfw = new ImGuiImplGlfw();
-        imGuiGl3 = new ImGuiImplGl3();
-
-        imGuiGlfw.init(window, true);
-        imGuiGl3.init("#version 150");
-
-        imguiInit = true;
-        System.out.println("[ExampleMod] ImGui initialized");
+        if (event.getKey() == GLFW.GLFW_KEY_F) {
+            boolean pressed = event.getAction() != GLFW.GLFW_RELEASE;
+            if (pressed && !lastFState) {
+                showGui = !showGui;
+            }
+            lastFState = pressed;
+        }
     }
 
-    @SubscribeEvent
-    public void onRenderGui(RenderGuiOverlayEvent.Pre event) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-
-        long window = mc.getWindow().getWindow();
-
-        // GLFW edge toggle
-        boolean fPressed = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_F) == GLFW.GLFW_PRESS;
-        if (fPressed && !lastFState) {
-            showGui = !showGui;
-        }
-        lastFState = fPressed;
-
+    // 🔥 вызывается из Mixin КАЖДЫЙ КАДР
+    public static void renderImGui() {
         if (!showGui) return;
 
-        initImGui();
-
-        // ❗ ОБЯЗАТЕЛЬНО: активный shader
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        RenderSystem.enableBlend();
-        RenderSystem.disableDepthTest();
+        if (!initialized) {
+            ImGui.createContext();
+            imGuiGlfw.init(Minecraft.getInstance().getWindow().getWindow(), false);
+            imGuiGl3.init("#version 150");
+            initialized = true;
+        }
 
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
+        // ==== IMGUI CONTENT ====
         ImGui.begin("ExampleMod");
-        ImGui.text("ImGui стабильно работает");
-        ImGui.text("GLFW keybind: F");
+        ImGui.text("ImGui работает.");
+        ImGui.text("F — toggle");
+        if (ImGui.button("Close")) {
+            showGui = false;
+        }
         ImGui.end();
+        // =======================
 
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
-
-        RenderSystem.enableDepthTest();
     }
 }
