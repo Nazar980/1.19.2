@@ -1,6 +1,7 @@
 package edu.unl.csce466;
 
 import imgui.ImGui;
+import imgui.ImGuiIO;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
 import net.minecraft.client.Minecraft;
@@ -14,7 +15,6 @@ import org.lwjgl.glfw.GLFW;
 @Mod(ExampleMod.MODID)
 @Mod.EventBusSubscriber(value = Dist.CLIENT)
 public class ExampleMod {
-
     public static final String MODID = "examplemod";
 
     private static boolean showGui = false;
@@ -22,49 +22,53 @@ public class ExampleMod {
 
     private static final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
     private static final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
+
     private static boolean initialized = false;
 
     public ExampleMod() {
         MinecraftForge.EVENT_BUS.register(this);
     }
 
-    // 🔥 GLFW F toggle
     @SubscribeEvent
     public static void onKey(InputEvent.Key event) {
-        if (Minecraft.getInstance().player == null) return;
-
-        if (event.getKey() == GLFW.GLFW_KEY_F) {
-            boolean pressed = event.getAction() != GLFW.GLFW_RELEASE;
-            if (pressed && !lastFState) {
-                showGui = !showGui;
-            }
-            lastFState = pressed;
+        if (Minecraft.getInstance().screen != null) return; // Не мешать в меню/инвентаре
+        if (event.getKey() == GLFW.GLFW_KEY_F && event.getAction() == GLFW.GLFW_PRESS) {
+            showGui = !showGui;
         }
     }
 
-    // 🔥 вызывается из Mixin КАЖДЫЙ КАДР
     public static void renderImGui() {
         if (!showGui) return;
 
         if (!initialized) {
             ImGui.createContext();
-            imGuiGlfw.init(Minecraft.getInstance().getWindow().getWindow(), false);
+            ImGuiIO io = ImGui.getIO();
+            io.setIniFilename(null);
+
+            imGuiGlfw.init(Minecraft.getInstance().getWindow().getWindow(), true);
+
+            // В 1.90.0 init с параметром работает стабильно
             imGuiGl3.init("#version 150");
+
+            // 🔥 ФИКС АССЕРТА: строим шрифты сразу после init
+            io.getFonts().build();
+
             initialized = true;
+            System.out.println("[ExampleMod] ImGui initialized successfully!");
         }
 
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
-        // ==== IMGUI CONTENT ====
-        ImGui.begin("ExampleMod");
-        ImGui.text("ImGui работает.");
-        ImGui.text("F — toggle");
-        if (ImGui.button("Close")) {
+        ImGui.begin("ExampleMod ImGui GUI");
+        ImGui.text("Привет! ImGui работает на 1.19.2");
+        ImGui.text("Версия ImGui: " + ImGui.getVersion());
+        ImGui.separator();
+        ImGui.text("Нажми F для скрытия");
+        if (ImGui.button("Закрыть")) {
             showGui = false;
         }
         ImGui.end();
-        // =======================
 
         ImGui.render();
         imGuiGl3.renderDrawData(ImGui.getDrawData());
