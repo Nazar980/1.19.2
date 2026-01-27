@@ -48,6 +48,7 @@ minecraft {
         server {
             workingDirectory project.file('run')
             property 'forge.logging.console.level', 'debug'
+
             mods {
                 examplemod {
                     source sourceSets.main
@@ -73,7 +74,7 @@ dependencies {
     minecraft 'net.minecraftforge:forge:1.19.2-43.4.4'
 
     // =========================
-    // MIXIN (ОБЯЗАТЕЛЬНО)
+    // MIXIN (только annotation processor, если нужен)
     // =========================
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
@@ -101,9 +102,8 @@ jar {
                 "Implementation-Version"  : project.jar.archiveVersion,
                 "Implementation-Vendor"   : "examplemodsareus",
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-
-                // 🔥 ВАЖНО: указание mixin конфига
-                "MixinConfigs": "forge-mixin.json"
+                // Mixin config указывается здесь — Forge сам найдёт
+                "MixinConfigs"            : "forge-mixin.json"
         ])
     }
 }
@@ -120,11 +120,4 @@ publishing {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-}
-
-//////////////////////////////////////////////////
-// 🔥 MIXIN CONFIG (БЕЗ ЭТОГО НЕ РАБОТАЕТ)
-//////////////////////////////////////////////////
-mixin {
-    add sourceSets.main, "forge-mixin.refmap.json"
 }
