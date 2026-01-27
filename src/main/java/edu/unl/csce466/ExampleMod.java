@@ -7,6 +7,7 @@ import imgui.flag.ImGuiConfigFlags;
 import imgui.glfw.ImGuiImplGlfw;
 import imgui.gl3.ImGuiImplGl3;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -30,21 +31,20 @@ public class ExampleMod {
     private static void initImGui() {
         if (imguiInit) return;
 
-        long windowHandle = Minecraft.getInstance().getWindow().getWindow();
+        long window = Minecraft.getInstance().getWindow().getWindow();
 
         ImGui.createContext();
         ImGuiIO io = ImGui.getIO();
         io.setIniFilename(null);
         io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard);
 
-        // ❗❗❗ ОБЯЗАТЕЛЬНО
         io.getFonts().addFontDefault();
         io.getFonts().build();
 
         imGuiGlfw = new ImGuiImplGlfw();
         imGuiGl3 = new ImGuiImplGl3();
 
-        imGuiGlfw.init(windowHandle, true);
+        imGuiGlfw.init(window, true);
         imGuiGl3.init("#version 150");
 
         imguiInit = true;
@@ -52,13 +52,13 @@ public class ExampleMod {
     }
 
     @SubscribeEvent
-    public void onRenderGui(RenderGuiOverlayEvent.Post event) {
+    public void onRenderGui(RenderGuiOverlayEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
         long window = mc.getWindow().getWindow();
 
-        // ===== GLFW EDGE CHECK =====
+        // GLFW edge toggle
         boolean fPressed = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_F) == GLFW.GLFW_PRESS;
         if (fPressed && !lastFState) {
             showGui = !showGui;
@@ -69,14 +69,17 @@ public class ExampleMod {
 
         initImGui();
 
+        // ❗ ОБЯЗАТЕЛЬНО: активный shader
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.enableBlend();
         RenderSystem.disableDepthTest();
 
         imGuiGlfw.newFrame();
         ImGui.newFrame();
 
         ImGui.begin("ExampleMod");
-        ImGui.text("ImGui работает");
-        ImGui.text("Открывается по F");
+        ImGui.text("ImGui стабильно работает");
+        ImGui.text("GLFW keybind: F");
         ImGui.end();
 
         ImGui.render();
